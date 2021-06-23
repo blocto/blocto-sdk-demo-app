@@ -11,3 +11,18 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.page-wrapper {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+}
+
+.big-spinner {
+  width: 4rem;
+  height: 4rem;
+}
+
+.card {
+  max-width: 600px;
+}
