@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import BloctoProvider from 'blocto-sdk';
+import BloctoProvider from '@blocto/sdk';
 import Web3 from 'web3'
 
 const App = () => {
