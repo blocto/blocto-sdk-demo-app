@@ -35,9 +35,14 @@ const App = () => {
   const init = useCallback(() => {
     let provider
     if(chain === 'ETH') {
-      provider = new BloctoProvider();
+      provider = new BloctoProvider({
+        chainId: '0x4', // 4: Rinkeby
+        rpc: 'https://rinkeby.infura.io/v3/91334df649974ecf9ee548a6ad8a381f'
+      });
     } else {
-      provider = new BloctoProvider({ chain: 'bsc', rpc: "https://data-seed-prebsc-1-s1.binance.org:8545" });
+      provider = new BloctoProvider({
+        chainId: '0x61', // 97: BSC Testnet
+      });
     }
 
     web3Ref.current = new Web3(provider);
