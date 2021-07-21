@@ -37,13 +37,11 @@ const App = () => {
     if(chain === 'ETH') {
       provider = new BloctoProvider({
         chainId: '0x4', // 4: Rinkeby
-        rpc: 'https://rinkeby.infura.io/v3/ef5a5728e2354955b562d2ffa4ae5305',
-        server: 'http://localhost:8702'
+        rpc: 'https://rinkeby.infura.io/v3/ef5a5728e2354955b562d2ffa4ae5305'
       });
     } else {
       provider = new BloctoProvider({
-        chainId: '0x61', // 97: BSC Testnet,
-        server: 'http://localhost:8702'
+        chainId: '0x61' // 97: BSC Testnet,
       });
     }
 
