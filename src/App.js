@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import BloctoProvider from '@blocto/sdk';
+import BloctoSDK from '@blocto/sdk';
 import Web3 from 'web3'
 
 const App = () => {
@@ -33,22 +33,28 @@ const App = () => {
   }, [status, web3])
 
   const init = useCallback(() => {
-    let provider
+    let sdk
     if(chain === 'ETH') {
-      provider = new BloctoProvider({
-        chainId: '0x4', // 4: Rinkeby
-        rpc: 'https://rinkeby.infura.io/v3/ef5a5728e2354955b562d2ffa4ae5305'
+      sdk = new BloctoSDK({
+        ethereum: {
+          chainId: '0x4', // 4: Rinkeby
+          rpc: 'https://rinkeby.infura.io/v3/ef5a5728e2354955b562d2ffa4ae5305',
+        }
+        
       });
     } else {
-      provider = new BloctoProvider({
-        chainId: '0x61' // 97: BSC Testnet,
+      sdk = new BloctoSDK({
+        ethereum: {
+          chainId: '0x61', // 97: BSC Testnet,
+          server: 'http://localhost:8702'
+        }
       });
     }
 
-    web3Ref.current = new Web3(provider);
+    web3Ref.current = new Web3(sdk.ethereum);
     setStatus('ENABLING')
     // connect wallet
-    provider.enable().then(() => setStatus('FETCH_DATA'))
+    sdk.ethereum.enable().then(() => setStatus('FETCH_DATA'))
   }, [chain])
 
   const signMessage = useCallback((e) => {
