@@ -11,6 +11,7 @@ const App = () => {
   const [account, setAccount] = useState(null);
 
   const [message, setMessage] = useState('Hello Blocto!');
+  const [signType, setSignType] = useState('eth_sign');
   const [signStatus, setSignStatus] = useState('IDLE');
   const [signature, setSignature] = useState(null);
 
@@ -59,14 +60,26 @@ const App = () => {
 
   const signMessage = useCallback((e) => {
     setSignStatus('PENDING');
-    web3.eth.sign(message, account)
-      .then(signature => {
-        setSignature(signature)
-        setSignStatus('SUCCESS')
-      })
-      .catch(() => setSignStatus('FAILED'))
+
+    if (signType === 'eth_sign') {
+      web3.eth.sign(message, account)
+        .then(signature => {
+          setSignature(signature)
+          setSignStatus('SUCCESS')
+        })
+        .catch(() => setSignStatus('FAILED'))
+    } else if (signType === 'personal_sign') {
+      web3.eth.personal.sign(message, account)
+        .then(signature => {
+          setSignature(signature)
+          setSignStatus('SUCCESS')
+        })
+        .catch(() => setSignStatus('FAILED'))
+    } else {
+      setSignStatus('Unknown signType')
+    }
     e.preventDefault();
-  }, [account, message, web3])
+  }, [account, message, signType, web3])
 
   const sendTransaction = useCallback((e) => {
     const transaction = {
@@ -159,6 +172,34 @@ const App = () => {
 
           <div className="card-body">
             <h5  className="card-title">Sign Message</h5>
+            <div className="mb-2">
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  id="eth_sign"
+                  value="eth_sign"
+                  checked={signType === 'eth_sign'}
+                  onChange={(e) => setSignType(e.target.value)}
+                  />
+                <label className="form-check-label">
+                  eth_sign
+                </label>
+              </div>
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  id="personal_sign"
+                  value="personal_sign"
+                  checked={signType === 'personal_sign'}
+                  onChange={(e) => setSignType(e.target.value)}
+                />
+                <label className="form-check-label">
+                  personal_sign
+                </label>
+              </div>
+            </div>
             <form onSubmit={signMessage}>
               <div className="input-group mb-3">
                 <input type="text" className="form-control" value={message} onChange={e => setMessage(e.target.value)} />
