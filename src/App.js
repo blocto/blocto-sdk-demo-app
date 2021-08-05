@@ -46,7 +46,7 @@ const App = () => {
       sdk = new BloctoSDK({
         ethereum: {
           chainId: '0x61', // 97: BSC Testnet,
-          server: 'http://localhost:8702'
+          rpc: 'https://rinkeby.infura.io/v3/ef5a5728e2354955b562d2ffa4ae5305',
         }
       });
     }
