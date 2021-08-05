@@ -41,9 +41,6 @@ const App = () => {
           chainId: '0x4', // 4: Rinkeby
           rpc: 'https://rinkeby.infura.io/v3/ef5a5728e2354955b562d2ffa4ae5305',
         },
-        solana: {
-          net: 'testnet'
-        }
       });
     } else {
       sdk = new BloctoSDK({
@@ -51,9 +48,6 @@ const App = () => {
           chainId: '0x61', // 97: BSC Testnet,
           rpc: 'https://rinkeby.infura.io/v3/ef5a5728e2354955b562d2ffa4ae5305',
         },
-        solana: {
-          net: 'testnet'
-        }
       });
     }
 
