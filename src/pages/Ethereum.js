@@ -1,6 +1,7 @@
 
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router'
+import { Link } from 'react-router-dom'
 import BloctoSDK from '@blocto/sdk';
 import Web3 from 'web3';
 
@@ -119,6 +120,9 @@ const Ethereum = () => {
       { status === 'ENABLED' && (
         <div className="card m-auto">
           <div className="card-body">
+          <Link className="d-inline-block plain-link mb-2 text-dark" to="/">
+            <i className="fas fa-chevron-left me-2" />
+          </Link>
             <h5 className="card-title">Account Info</h5>
             <div className="d-flex justify-content-between">
               <div className="me-4">Account</div>
