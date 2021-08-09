@@ -25,7 +25,7 @@ const Solana = () => {
   const [txHash, setTxHash] = useState(null);
 
   useEffect(() => {
-    sdk.current = new BloctoSDK({ solana: { net: 'testnet', server: 'https://blocto-wallet.ngrok.io' } });
+    sdk.current = new BloctoSDK({ solana: { net: 'testnet' } });
 
     setStatus('ENABLING')
     // connect wallet
