@@ -2,7 +2,12 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import BloctoSDK from '@blocto/sdk';
-import { Transaction, PublicKey, SystemProgram } from '@solana/web3.js';
+import {
+  Transaction,
+  PublicKey,
+  SystemProgram,
+  Keypair,
+} from '@solana/web3.js';
 
 const Solana = () => {
 
@@ -14,11 +19,13 @@ const Solana = () => {
   const [balance, setBalance] = useState(null);
   const [sendTo, setSendTo] = useState('');
   const [amount, setAmount] = useState('');
+  const [newAccount, setNewAccount] = useState(null);
   const [transactionStatus, setTransactionStatus] = useState('IDLE');
+  const [partialSignTxStatus, setPartialSignTxStatus] = useState('IDLE');
   const [txHash, setTxHash] = useState(null);
 
   useEffect(() => {
-    sdk.current = new BloctoSDK({ solana: { net: 'testnet' } });
+    sdk.current = new BloctoSDK({ solana: { net: 'testnet', server: 'https://blocto-wallet.ngrok.io' } });
 
     setStatus('ENABLING')
     // connect wallet
@@ -48,11 +55,7 @@ const Solana = () => {
     const { solana } = sdk.current
     e.preventDefault();
 
-    const epoch = await solana.request({ method: 'getEpochInfo' });
-
-    const slot = epoch.absoluteSlot;
-
-    const recentBlock = await solana.request({ method: 'getBlock', params: [slot] });
+    const { value: { blockhash } } = await solana.request({ method: 'getRecentBlockhash' });
     const transaction = new Transaction();
     const publicKey = new PublicKey(account);
     transaction.add(SystemProgram.transfer({
@@ -62,7 +65,7 @@ const Solana = () => {
     }));
 
     transaction.feePayer = publicKey;
-    transaction.recentBlockhash = recentBlock.blockhash
+    transaction.recentBlockhash = blockhash
 
     setTransactionStatus('PENDING');
     solana.signAndSendTransaction(transaction)
@@ -70,11 +73,65 @@ const Solana = () => {
         setTxHash(response)
         setTransactionStatus('SUCCESS')
         solana.request({ method: 'getBalance', params: [account]})
-          .then(response => setBalance(response.value))
+          .then(({ value }) => setBalance(value))
       })
       .catch(() => setTransactionStatus('FAILED'));
 
   }, [account, sendTo, amount]);
+
+  const sendPartialSignTransaction = useCallback(async (e) => {
+    if(!sdk.current)return;
+    const { solana } = sdk.current
+    e.preventDefault();
+
+    const { value: { blockhash } } = await solana.request({ method: 'getRecentBlockhash' });
+    const transaction = new Transaction();
+    const publicKey = new PublicKey(account);
+
+    const newKeypair = new Keypair();
+    const newAccountKey = newKeypair.publicKey;
+
+    const rent = await solana.request({ method: 'getMinimumBalanceForRentExemption', params: [10] })
+
+    const createAccountInstruction = SystemProgram.createAccount({
+      fromPubkey: publicKey,
+      newAccountPubkey: newAccountKey,
+      lamports: rent,
+      // create an account with newly-generated key, and assign it to system program
+      programId: SystemProgram.programId,
+      space: 10,
+    });
+    transaction.add(createAccountInstruction);
+
+    setNewAccount(newAccountKey.toBase58());
+
+    const transferInstruction = SystemProgram.transfer({
+      fromPubkey: publicKey,
+      toPubkey: newAccountKey,
+      lamports: 100,
+    });
+
+    transaction.add(transferInstruction);
+
+    transaction.feePayer = publicKey;
+    transaction.recentBlockhash = blockhash;
+
+    try {
+      const converted = await solana.convertToProgramWalletTransaction(transaction)
+      converted.partialSign(newKeypair);
+
+      setPartialSignTxStatus('PENDING');
+
+      const response = await solana.signAndSendTransaction(converted)
+      setTxHash(response);
+      setPartialSignTxStatus('SUCCESS');
+      solana.request({ method: 'getBalance', params: [account]})
+        .then(({ value }) => setBalance(value));
+    } catch (e) {
+      console.error(e);
+      setPartialSignTxStatus('FAILED')
+    }
+  }, [account]);
 
   return (
     <div className="page-wrapper">
@@ -103,7 +160,7 @@ const Solana = () => {
           <hr />
 
           <div className="card-body">
-            <h5  className="card-title">Send Transaction</h5>
+            <h5 className="card-title">Send Transaction</h5>
             <form onSubmit={sendTransaction}>
               <div className="mb-3">
                 <label className="form-label">Receiver address</label>
@@ -137,6 +194,59 @@ const Solana = () => {
                 disabled={transactionStatus === 'PENDING'}
               >
                 {transactionStatus === 'PENDING' 
+                  ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-1"/>
+                      <span>Sending</span>
+                    </>
+                  ) 
+                  : 'Send'
+                }
+              </button>
+            </form>
+          </div>
+
+          <hr />
+
+          <div className="card-body">
+            <h5 className="card-title">Create account &amp; transfer</h5>
+            <p>
+              <small>
+                Create a new account and transfer 100 lamports to it. <br />
+                This is a kind of transaction involving dApp side signing.
+              </small>
+            </p>
+            
+            <form onSubmit={sendPartialSignTransaction}>
+              { !['IDlE', 'FAILED'].includes(partialSignTxStatus) && newAccount && (
+                <div className="alert alert-info">
+                  Created Account, PubKey: {newAccount}
+                </div>
+              )}
+              { partialSignTxStatus === 'SUCCESS' && (
+                <div className="alert alert-success">
+                  Transaction Succeed!<br />
+                  Check your transaction {' '} 
+                  <a 
+                    href={`https://explorer.solana.com/tx/${txHash}?cluster=testnet`} 
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    here
+                  </a>
+                </div>
+              )}
+              { partialSignTxStatus === 'FAILED' && (
+                <div className="alert alert-danger">
+                  Something went wrong :'(
+                </div>
+              )}
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={partialSignTxStatus === 'PENDING'}
+              >
+                {partialSignTxStatus === 'PENDING' 
                   ? (
                     <>
                       <span className="spinner-border spinner-border-sm me-1"/>
