@@ -27,11 +27,13 @@ const Solana = () => {
   const [txHash, setTxHash] = useState(null);
 
   useEffect(() => {
-    sdk.current = new BloctoSDK({ solana: { net: 'testnet' } });
+    sdk.current = new BloctoSDK({ solana: { net: 'devnet' } });
 
     setStatus('ENABLING')
     // connect wallet
-    sdk.current.solana.connect().then(() => setStatus('FETCH_DATA'))
+    sdk.current.solana.connect().then(() => {
+      setStatus('FETCH_DATA')
+    })
   }, [])
 
   useEffect(() => {
@@ -39,15 +41,15 @@ const Solana = () => {
     const { solana } = sdk.current
 
     const fetchData = async () => {
-      const accounts = await solana.request({ method: 'getAccounts' });
+      setAccount(solana.accounts[0]);
       const balanceResponse = await solana.request({
         method: 'getBalance',
-        params: [accounts[0]]
+        params: [solana.accounts[0]]
       });
-      setAccount(accounts[0]);
+
       setBalance(balanceResponse.value);
     }
-    if(status === 'FETCH_DATA') {
+    if(solana.accounts[0] && status === 'FETCH_DATA') {
       fetchData().then(() => setStatus('ENABLED'))
     };
   }, [status])
