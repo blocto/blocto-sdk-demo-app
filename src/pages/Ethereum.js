@@ -5,6 +5,9 @@ import { Link } from 'react-router-dom'
 import BloctoSDK from '@blocto/sdk';
 import Web3 from 'web3';
 
+const typedDataV3 = '{"types":{"EIP712Domain":[{"name":"name","type":"string"},{"name":"version","type":"string"},{"name":"chainId","type":"uint256"},{"name":"verifyingContract","type":"address"}],"Person":[{"name":"name","type":"string"},{"name":"wallet","type":"address"}],"Mail":[{"name":"from","type":"Person"},{"name":"to","type":"Person"},{"name":"contents","type":"string"}]},"primaryType":"Mail","domain":{"name":"Ether Mail","version":"1","chainId":4,"verifyingContract":"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC"},"message":{"from":{"name":"Cow","wallet":"0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"},"to":{"name":"Bob","wallet":"0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"},"contents":"Hello, Bob!"}}'
+const typedDataV4 = '{"domain":{"chainId":4,"name":"Ether Mail","verifyingContract":"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC","version":"1"},"message":{"contents":"Hello, Bob!","from":{"name":"Cow","wallets":["0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826","0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF"]},"to":[{"name":"Bob","wallets":["0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB","0xB0BdaBea57B0BDABeA57b0bdABEA57b0BDabEa57","0xB0B0b0b0b0b0B000000000000000000000000000"]}]},"primaryType":"Mail","types":{"EIP712Domain":[{"name":"name","type":"string"},{"name":"version","type":"string"},{"name":"chainId","type":"uint256"},{"name":"verifyingContract","type":"address"}],"Group":[{"name":"name","type":"string"},{"name":"members","type":"Person[]"}],"Mail":[{"name":"from","type":"Person"},{"name":"to","type":"Person[]"},{"name":"contents","type":"string"}],"Person":[{"name":"name","type":"string"},{"name":"wallets","type":"address[]"}]}}'
+
 const Ethereum = () => {
   const location = useLocation();
   const path = location.pathname;
@@ -19,6 +22,11 @@ const Ethereum = () => {
   const [signType, setSignType] = useState('eth_sign');
   const [signStatus, setSignStatus] = useState('IDLE');
   const [signature, setSignature] = useState(null);
+
+  const [typedData, setTypedData] = useState(typedDataV4);
+  const [typedDataVersion, setTypedDataVersion] = useState(4);
+  const [signTypedStatus, setSignTypedStatus] = useState('IDLE');
+  const [typedSignature, setTypedSignature] = useState(null);
 
   const [balance, setBalance] = useState(null);
   const [sendTo, setSendTo] = useState('');
@@ -40,7 +48,7 @@ const Ethereum = () => {
       sdk = new BloctoSDK({
         ethereum: {
           chainId: '0x61', // 97: BSC Testnet,
-          rpc: 'https://rinkeby.infura.io/v3/ef5a5728e2354955b562d2ffa4ae5305',
+          rpc: 'https://data-seed-prebsc-1-s1.binance.org:8545/',
         }
       });
     }
@@ -84,6 +92,24 @@ const Ethereum = () => {
     }
     e.preventDefault();
   }, [account, message, web3, signType])
+
+  const signTypedData = useCallback((e) => {
+    setSignTypedStatus('PENDING')
+    const provider = web3.currentProvider;
+    let method
+    if(typedDataVersion !== 3 || typedDataVersion !== 4) {
+      method = `eth_signTypedData`
+    } else {
+      method = `eth_signTypedData_v${typedDataVersion}`
+    }
+    provider.request({ method, params: [account, typedData], from: account })
+      .then(signature => {
+        setTypedSignature(signature)
+        setSignTypedStatus('SUCCESS')
+      })
+      .catch(() => setSignTypedStatus('FAILED'))
+    e.preventDefault();
+  }, [account, web3, typedData, typedDataVersion])
 
   const sendTransaction = useCallback((e) => {
     const transaction = {
@@ -201,6 +227,74 @@ const Ethereum = () => {
             )}
           </div>
 
+          <hr />
+
+          <div className="card-body">
+            <h5  className="card-title">Sign Typed Data</h5>
+            <div className="mb-2">
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  value={3}
+                  checked={typedDataVersion === 3}
+                  onChange={(e) => {
+                    setTypedDataVersion(+e.target.value)
+                    setTypedData(typedDataV3)
+                  }}
+                  />
+                <label className="form-check-label">
+                  v3
+                </label>
+              </div>
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  value={4}
+                  checked={typedDataVersion === 4}
+                  onChange={(e) => {
+                    setTypedDataVersion(+e.target.value)
+                    setTypedData(typedDataV4)
+                  }}
+                />
+                <label className="form-check-label">
+                  v4
+                </label>
+              </div>
+            </div>
+            <form onSubmit={signTypedData}>
+              <textarea className="form-control" value={typedData} disabled rows={10}/>
+              <button
+                type="submit"
+                className="btn btn-outline-primary mt-2"
+                disabled={signTypedStatus === 'PENDING'}
+              >
+                {signTypedStatus === 'PENDING' 
+                  ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-1"/>
+                      <span>Signing</span>
+                    </>
+                  ) 
+                  : 'Sign'
+                }
+              </button>
+            </form>
+            { signTypedStatus === 'SUCCESS' && (
+              <div>
+                Your Signature for <strong>Typed Data V{typedDataVersion}</strong> is 
+                <div className="alert alert-success">
+                  {typedSignature}
+                </div>
+              </div>
+            )}
+            { signTypedStatus === 'FAILED' && (
+              <div className="alert alert-danger">
+                Something went wrong :'(
+              </div>
+            )}
+          </div>
           <hr />
 
           <div className="card-body">
